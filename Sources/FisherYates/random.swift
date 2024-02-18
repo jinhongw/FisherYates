@@ -6,22 +6,33 @@
 //
 
 #if os(Linux)
-import Glibc
+  import Glibc
 #else
-import Darwin.C
+  import Darwin.C
 #endif
 
-public extension MutableCollection where Index == Int {
-    mutating func shuffle() {
-        if count <= 1 { return }
+#if canImport(Darwin)
+import Darwin
 
-        for i in 0..<count - 1 {
-          #if os(Linux)
-            let j = Int(random() % (count - i)) + i
-          #else
-            let j = Int(arc4random_uniform(UInt32(count - i))) + i
-          #endif
-            swapAt(i, j)
-        }
-    }
+public func random<T: BinaryInteger> (_ n: T) -> T {
+  return numericCast( arc4random_uniform( numericCast(n) ) )
 }
+
+#elseif canImport(Glibc)
+
+import Glibc
+
+public func random<T: BinaryInteger> (_ n: T) -> T {
+  precondition(n > 0)
+
+  let upperLimit = RAND_MAX - RAND_MAX % numericCast(n)
+
+  while true {
+    let x = Glibc.random()
+    if x < upperLimit { return numericCast(x) % n }
+  }
+}
+
+#else
+#error("unsupported platform")
+#endif
